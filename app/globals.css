@@ -1,26 +1,51 @@
 @import "tailwindcss";
 
+/* ============================================================
+   쇼핑 리뷰 분석 챗봇
+   교재 디자인 요구사항 : 라이트 모드 기본, white / gray-50 배경,
+   강조색 blue-500, AI 메시지는 gray-100 배경
+   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f9fafb; /* gray-50 */
+  --surface: #ffffff;
+  --border: #e5e7eb; /* gray-200 */
+  --foreground: #111827; /* gray-900 */
+  --muted: #6b7280; /* gray-500 */
+  --accent: #3b82f6; /* blue-500 */
+  --bubble-ai: #f3f4f6; /* gray-100 */
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-bubble-ai: var(--bubble-ai);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Apple SD Gothic Neo",
+    "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* 메시지 등장 애니메이션 */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 0.3s ease-out both; }
+
+/* 스크롤바를 얇게 */
+.thin-scrollbar::-webkit-scrollbar { width: 8px; }
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+.thin-scrollbar::-webkit-scrollbar-track { background: transparent; }

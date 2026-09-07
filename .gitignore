@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 예시 파일은 커밋합니다 (실제 키가 들어있지 않음)
+!.env.example
+!.env.local.example
