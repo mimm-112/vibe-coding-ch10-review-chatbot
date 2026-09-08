@@ -15,6 +15,8 @@ type Props = {
   initialIndexedCount: number
   /** 서버에서 초기 데이터를 못 가져왔을 때의 안내 문구 */
   initialError: string | null
+  /** 현재 답변 생성에 사용하는 모델 이름 */
+  modelLabel: string
 }
 
 export default function ChatApp({
@@ -22,6 +24,7 @@ export default function ChatApp({
   initialSummary,
   initialIndexedCount,
   initialError,
+  modelLabel,
 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [chats, setChats] = useState<ChatRoom[]>(initialChats)
@@ -190,6 +193,10 @@ export default function ChatApp({
             <p className="truncate text-sm font-semibold">쇼핑 리뷰 분석 봇</p>
             <p className="truncate text-xs text-muted">{PRODUCT_NAME}</p>
           </div>
+
+          <span className="ml-auto hidden shrink-0 rounded-full bg-gray-100 px-2.5 py-1 font-mono text-[11px] text-muted sm:block">
+            {modelLabel}
+          </span>
         </header>
 
         {/* 메시지 목록 */}

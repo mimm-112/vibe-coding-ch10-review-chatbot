@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { ChatOpenAI } from '@langchain/openai'
 import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts'
 import { StringOutputParser } from '@langchain/core/output_parsers'
 import { RunnableSequence } from '@langchain/core/runnables'
 import { AIMessage, HumanMessage, type BaseMessage } from '@langchain/core/messages'
 import type { Document } from '@langchain/core/documents'
+import { createChatModel } from '@/lib/llm'
 import { getVectorStore } from '@/lib/pinecone'
 import { createClient } from '@/lib/supabase/server'
 import type { SourceReview } from '@/types/chat'
@@ -78,13 +78,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '질문을 입력해주세요.' }, { status: 400 })
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: '.env 파일에 OPENAI_API_KEY 를 설정하세요.' },
-        { status: 500 },
-      )
-    }
-
     const supabase = createClient()
 
     // ------------------------------------------------------------
@@ -133,10 +126,8 @@ export async function POST(request: Request) {
     // 질문과 가장 유사한 리뷰 5개를 불러옵니다.
     const retriever = vectorStore.asRetriever({ k: 5 })
 
-    const chat = new ChatOpenAI({
-      model: 'gpt-5-nano',
-      apiKey: process.env.OPENAI_API_KEY,
-    })
+    // LLM은 .env 의 LLM_PROVIDER 로 교체할 수 있습니다 (기본값: 무료인 제미나이)
+    const chat = createChatModel()
 
     const prompt = ChatPromptTemplate.fromMessages([
       ['system', SYSTEM_TEMPLATE],
@@ -208,7 +199,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error: `답변 생성 실패: ${message}`,
-        hint: 'Pinecone에 인덱싱을 했는지, OPENAI_API_KEY와 크레딧이 있는지 확인하세요.',
+        hint: 'Pinecone에 인덱싱을 했는지, .env 의 LLM 키(GOOGLE_API_KEY 등)가 올바른지 확인하세요.',
       },
       { status: 500 },
     )

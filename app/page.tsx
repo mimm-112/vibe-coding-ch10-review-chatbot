@@ -1,4 +1,5 @@
 import ChatApp from './ChatApp'
+import { getModelLabel } from '@/lib/llm'
 import { getChats, getIndexedCount } from '@/lib/queries'
 import { EMPTY_SUMMARY, getReviewSummary } from '@/lib/summary'
 import type { ChatRoom, ReviewSummary } from '@/types/chat'
@@ -28,12 +29,21 @@ export default async function Page() {
     initialError = `수파베이스에 연결하지 못했습니다: ${message}\n.env 설정과 마이그레이션(npx supabase db push)을 확인하세요.`
   }
 
+  // 현재 어떤 LLM으로 답변하는지 화면에 표시합니다.
+  let modelLabel = ''
+  try {
+    modelLabel = getModelLabel()
+  } catch {
+    modelLabel = '설정 필요'
+  }
+
   return (
     <ChatApp
       initialChats={chats}
       initialSummary={summary}
       initialIndexedCount={indexedCount}
       initialError={initialError}
+      modelLabel={modelLabel}
     />
   )
 }

@@ -16,7 +16,7 @@ Pinecone 인덱스 ◀────────────┐
    │                        │ ④ 질문도 같은 모델로 임베딩
    │ ⑤ 유사도 상위 5건 검색   │
    ▼                        │
-LCEL Chain ──▶ gpt-5-nano ──▶ 답변 + 참고한 리뷰 카드
+LCEL Chain ──▶   LLM     ──▶ 답변 + 참고한 리뷰 카드
    (prompt | model | parser)
 ```
 
@@ -28,7 +28,7 @@ LCEL Chain ──▶ gpt-5-nano ──▶ 답변 + 참고한 리뷰 카드
 | RAG 오케스트레이션 | LangChain.js (LCEL) | 로더 · 스플리터 · 임베딩 · 리트리버 표준화 |
 | 벡터 DB | Pinecone (serverless) | 관리형, 무료 요금제 |
 | 임베딩 | `llama-text-embed-v2` (Pinecone Inference) | **무료** — OpenAI 임베딩은 별도 과금 |
-| 답변 생성 | OpenAI `gpt-5-nano` | 가장 저렴한 모델 (실습에 $5면 충분) |
+| 답변 생성 | **Gemini / Ollama / OpenAI 선택** | 기본값은 **무료**인 제미나이 (`LLM_PROVIDER`로 교체) |
 | 대화 기록 · 리뷰 원본 | Supabase (PostgreSQL) | 새로고침해도 대화가 남음 |
 
 ## 실행 방법
@@ -60,10 +60,13 @@ npx supabase db push   # reviews / chats / messages 테이블 + RLS 생성
 > `db push` 후에도 테이블이 안 보이면 대시보드 **[SQL Editor]** 에
 > `supabase/migrations/20251230000000_init_chat.sql` 내용을 붙여넣고 Run 하면 됩니다.
 
-### 3. OpenAI 설정
+### 3. LLM API 키 발급 (기본값: 무료 제미나이)
 
-1. [platform.openai.com](https://platform.openai.com) → **API keys** → **Create new secret key**
-2. **Billing → Add to credit balance** 에서 최소 $5 충전 (API는 구독과 별개로 과금됩니다)
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey) 에서 **Create API key** 를 누르면
+카드 등록 없이 무료 키가 나옵니다. 이 키를 `.env` 의 `GOOGLE_API_KEY` 에 넣으세요.
+
+유료 없이 쓰는 다른 방법(Ollama)이나 교재대로 OpenAI를 쓰는 방법은
+아래 [비용 섹션](#비용--전부-무료로-돌릴-수-있습니다)을 참고하세요.
 
 ### 4. 환경 변수 & 실행
 
@@ -90,6 +93,7 @@ app/
    ├─ chats/[id]/route.ts   대화 내역 조회 / 삭제
    └─ summary/route.ts      리뷰 요약 통계
 lib/
+├─ llm.ts                   답변 생성 모델 선택 (gemini / ollama / openai)
 ├─ pinecone.ts              PineconeEmbeddings + PineconeStore + ensureIndex
 ├─ reviews.ts               CSVLoader → Document 변환
 ├─ summary.ts               평점·감정 분포·장단점 키워드 집계
@@ -142,11 +146,67 @@ if (isComposingRef.current || event.nativeEvent.isComposing) return
 | 인덱싱 시 벡터 업로드 거부 | integrated embedding 인덱스입니다. 인덱스를 삭제하고 버튼을 다시 누르세요 |
 | `수파베이스 저장 실패` | `npx supabase db push` 미실행 또는 RLS 정책 누락 |
 | 답변이 리뷰와 무관 | 인덱싱을 안 했거나 Pinecone 인덱스가 비어 있음 |
-| `429 insufficient_quota` | OpenAI 크레딧 충전 필요 (Billing) |
-| 답변이 느림 | `gpt-5-nano`는 저렴한 대신 응답이 느릴 수 있습니다 |
+| `429` (제미나이) | 무료 티어 분당 요청 제한. 잠시 후 재시도 |
+| `429 insufficient_quota` (OpenAI) | 크레딧 충전 필요 (Billing) |
+| `fetch failed` (Ollama) | `ollama serve` 가 실행 중인지 확인 |
+| 답변이 느림 | 저렴한/로컬 모델은 응답이 느릴 수 있습니다 |
 
-## 비용 메모
+## 비용 — 전부 무료로 돌릴 수 있습니다
 
-- 임베딩 : **$0** (Pinecone Inference 무료 티어)
-- 벡터 DB : **$0** (Pinecone Starter)
-- 대화 : `gpt-5-nano` 기준 질문 1건당 수십~수백 토큰. $5면 실습 내내 충분합니다.
+| 항목 | 비용 | 비고 |
+| --- | --- | --- |
+| 임베딩 (`llama-text-embed-v2`) | **$0** | Pinecone Inference 무료 티어 |
+| 벡터 DB (Pinecone) | **$0** | Starter 요금제, 카드 등록 불필요 |
+| 대화 기록 (Supabase) | **$0** | Free 요금제 |
+| 답변 생성 LLM | **선택** | 아래 참고 |
+
+돈이 드는 부분은 **답변 생성 LLM 하나뿐**이라 교체할 수 있게 만들어 두었습니다.
+`.env` 의 `LLM_PROVIDER` 값만 바꾸면 됩니다.
+
+### `LLM_PROVIDER=gemini` (기본값 · 추천)
+
+카드 등록 없이 무료로 쓸 수 있습니다.
+
+1. [aistudio.google.com/apikey](https://aistudio.google.com/apikey) 접속 → **Create API key**
+2. `.env` 에 붙여넣기
+
+```bash
+LLM_PROVIDER=gemini
+GOOGLE_API_KEY=AIza...
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+> 무료 티어에는 분당/일당 요청 수 제한이 있습니다. 실습 정도면 충분하지만
+> 연속으로 빠르게 물어보면 `429` 가 날 수 있습니다. 잠시 기다렸다 다시 보내면 됩니다.
+
+### `LLM_PROVIDER=ollama` (완전 무료 · 오프라인)
+
+가입도 API 키도 필요 없습니다. 내 컴퓨터에서 모델이 돌아갑니다.
+
+```bash
+brew install ollama
+ollama serve          # 별도 터미널에서 실행해두기
+ollama pull llama3.2  # 약 2GB 다운로드
+```
+
+```bash
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=llama3.2
+```
+
+> 답변 품질과 속도는 컴퓨터 사양을 탑니다. 한국어 답변은 제미나이가 더 자연스럽습니다.
+
+### `LLM_PROVIDER=openai` (교재와 동일)
+
+교재 그대로 따라가고 싶을 때만 사용하세요. **최소 $5 크레딧 충전이 필요합니다.**
+
+1. [platform.openai.com](https://platform.openai.com) → **API keys** → **Create new secret key**
+2. **Billing → Add to credit balance** 에서 $5 충전
+
+```bash
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-5-nano
+```
+
+현재 어떤 모델로 답변 중인지는 채팅 화면 헤더 오른쪽에 표시됩니다.
